@@ -8,10 +8,13 @@ from pdf2image import convert_from_path
 from io import BytesIO
 import openai
 import backoff
+from openai import AzureOpenAI
 
 base_path = os.path.expanduser("~/data/human_table_benchmark")
 pdfs = glob.glob(os.path.join(base_path, "**", "*.pdf"), recursive=True)
-
+client = AzureOpenAI(azure_endpoint=os.getenv('AZURE_OPENAI_ENDPOINT'),
+                     api_key=os.getenv('AZURE_OPENAI_KEY'),
+                     api_version=os.getenv('AZURE_OPENAI_VERSION'))
 
 def convert_pdf_to_base64_image(pdf_path):
     images = convert_from_path(pdf_path, first_page=1, last_page=1)
@@ -22,8 +25,8 @@ def convert_pdf_to_base64_image(pdf_path):
 
 @backoff.on_exception(backoff.expo, (openai.RateLimitError), max_tries=5)
 def analyze_document(base64_image):
-    response = openai.chat.completions.create(
-        model="gpt-4o",
+    response = client.chat.completions.create(
+        model=os.getenv('AZURE_OPENAI_DEPLOYMENT'),
         messages=[
             {
                 "role": "user",
